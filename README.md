@@ -57,7 +57,7 @@ kaggle datasets download -d austinreese/craigslist-carstrucks-data --unzip -p ./
 | **Continuous Features** | Numeric variables that can take any value within a range (e.g., age, hours-per-week, odometer). |
 | **Categorical Features** | Variables with a finite set of discrete categories (e.g., workclass, fuel type, manufacturer). |
 | **Feature Derivation** | Creating new features from existing ones to capture more meaningful signals (e.g., `capital-net = capital-gain - capital-loss`). |
-| **Feature Selection** | Identifying the most relevant features for prediction while removing irrelevant or redundant ones to reduce overfitting and improve interpretability. |
+| **Feature Selection** | Choosing which features (columns) to keep and which to drop before training. Removes noise and irrelevant signals so the model focuses on what actually matters. Can be done manually (dropping known-irrelevant columns), via correlation analysis, or automatically by models like Lasso that drive weak feature coefficients to exactly zero. |
 | **Correlation Analysis** | Measuring the linear relationship between features and the target variable to inform feature selection. |
 
 ### Data Preprocessing
@@ -90,11 +90,14 @@ kaggle datasets download -d austinreese/craigslist-carstrucks-data --unzip -p ./
 | Concept | Definition |
 |---------|-----------|
 | **Pipeline** | Chains preprocessing and model steps into a single object, ensuring consistent transformations and preventing data leakage during cross-validation. |
-| **Cross-Validation (CV)** | Evaluates model performance by training/testing on multiple non-overlapping subsets of the data. Provides a more robust estimate of generalization. |
-| **GridSearchCV** | Exhaustive search over specified hyperparameter combinations using cross-validation to find the optimal configuration. |
-| **Hyperparameter Tuning** | Optimizing model configuration parameters (not learned from data) such as regularization strength, tree depth, or number of neighbors. |
-| **Overfitting** | When a model learns noise in the training data and fails to generalize to unseen data. Detected when training performance greatly exceeds test performance. |
-| **Regularization** | Adding a penalty term to the loss function to constrain model complexity (L1/Lasso, L2/Ridge). Prevents overfitting. |
+| **Cross-Validation (CV)** | Evaluates model performance by splitting training data into k equal folds, training on k−1 folds and validating on the remaining one, rotating until every fold has been the validation set once. The scores are averaged for a more reliable estimate than a single split. `cv=5` means 5 folds — each fold is 20% of the training data. |
+| **GridSearchCV** | Exhaustive search over specified hyperparameter combinations using cross-validation to find the optimal configuration. Tries every combination, scores each with CV, and exposes the winner via `best_params_` and `best_score_`. |
+| **Hyperparameter Tuning** | Optimizing model configuration parameters that are not learned from data — such as regularization strength (alpha), tree depth, or number of neighbors. These must be set before training and searched via GridSearchCV. |
+| **Overfitting** | When a model learns noise in the training data and fails to generalize to unseen data. Detected when training performance greatly exceeds test performance. Regularization, cross-validation, and pruning (for trees) help prevent it. |
+| **Regularization** | Adding a penalty term to the model's cost function to constrain coefficient size, preventing overfitting. The model minimises: `Total cost = Prediction error + λ × penalty`. A higher λ (alpha) = stronger penalty = simpler model. Two types: **L1** (Lasso) penalises the sum of absolute coefficient values and can drive weak ones to exactly zero. **L2** (Ridge) penalises the sum of squared coefficient values and shrinks all coefficients proportionally but never to zero. |
+| **Alpha (λ)** | The regularization strength hyperparameter in Ridge and Lasso. Controls how hard the penalty squeezes the coefficients. `alpha=0` means no penalty (plain linear regression). Higher alpha = more shrinkage = simpler model but potentially underfitting. Tuned via GridSearchCV. |
+| **Coefficients** | The values a linear model learns for each feature, representing the direction and magnitude of that feature's impact on the prediction. A positive coefficient means the feature increases the predicted value (e.g. `manufacturer_ferrari` raises price). A negative coefficient means it decreases the predicted value (e.g. `vehicle_age` lowers price). Features with a coefficient of zero (Lasso) have been excluded from the model. |
+| **ElasticNet** | A regularization method that combines both L1 and L2 penalties. Useful when you want Lasso's feature selection behaviour but with more stable coefficient estimates when features are correlated. Not used in this assignment but a common next step. |
 
 ### Classification Models Used
 
@@ -108,8 +111,8 @@ kaggle datasets download -d austinreese/craigslist-carstrucks-data --unzip -p ./
 
 | Model | How It Works | Strengths |
 |-------|-------------|-----------|
-| **Ridge Regression** | Linear regression with L2 penalty (sum of squared coefficients). Shrinks all coefficients toward zero. | Handles multicollinearity, stable estimates. |
-| **Lasso Regression** | Linear regression with L1 penalty (sum of absolute coefficients). Can drive coefficients to exactly zero. | Built-in feature selection, sparse solutions. |
+| **Ridge Regression** | Linear regression with L2 penalty (sum of squared coefficients). Shrinks all coefficients proportionally toward zero but never to exactly zero — every feature stays in the model. Squaring the coefficients means large ones are penalised much more than small ones, so Ridge aggressively controls big coefficients while barely affecting small ones. Best when most features are genuinely useful. | Handles multicollinearity, stable estimates. |
+| **Lasso Regression** | Linear regression with L1 penalty (sum of absolute coefficient values). The absolute value penalty creates sharp corners in the cost function where the mathematical optimum lands exactly at zero for weak features — effectively removing them. Performs automatic feature selection. Best when you suspect many features are irrelevant. | Built-in feature selection, sparse solutions. |
 | **Gradient Boosting** | Builds an ensemble of trees sequentially, where each tree corrects the residual errors of the previous ones. | High predictive power, handles non-linearity. |
 | **Random Forest** | Builds many independent decision trees on bootstrapped samples and averages predictions. | Robust to overfitting, captures interactions. |
 
@@ -121,9 +124,9 @@ kaggle datasets download -d austinreese/craigslist-carstrucks-data --unzip -p ./
 | **Precision** | Classification | Of all positive predictions, how many are actually positive. |
 | **Recall** | Classification | Of all actual positives, how many were correctly identified. |
 | **F1 Score** | Classification | Harmonic mean of precision and recall: $F1 = 2 \cdot \frac{precision \cdot recall}{precision + recall}$ |
-| **R² (Coefficient of Determination)** | Regression | Proportion of variance in the target explained by the model. 1.0 = perfect, 0.0 = predicts the mean. |
-| **RMSE (Root Mean Squared Error)** | Regression | Square root of average squared differences between predictions and actuals. Penalizes large errors. |
-| **MAE (Mean Absolute Error)** | Regression | Average absolute difference between predictions and actuals. More robust to outliers than RMSE. |
+| **R² (Coefficient of Determination)** | Regression | Proportion of the variance in the target that the model explains. R²=1.0 means perfect predictions. R²=0.0 means the model does no better than predicting the mean every time. R²=0.83 (Gradient Boosting here) means 83% of the variation in vehicle prices is explained by the model. Negative R² means the model is worse than the mean baseline. |
+| **RMSE (Root Mean Squared Error)** | Regression | Square root of the average squared prediction errors. Expressed in the same units as the target (dollars here), so RMSE=$6,018 means predictions are off by ~$6,018 on average. Squaring before averaging means large errors are penalised more heavily than small ones — one $30,000 miss hurts more than thirty $1,000 misses. |
+| **MAE (Mean Absolute Error)** | Regression | Average of the absolute differences between predictions and actuals. Also in the same units as the target. MAE=$3,460 means the typical prediction is off by $3,460. Unlike RMSE, every error is weighted equally — a $30,000 miss is just 30× worse than a $1,000 miss, not 900×. More interpretable and more robust to outliers than RMSE. |
 
 ---
 
