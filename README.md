@@ -78,6 +78,13 @@ kaggle datasets download -d austinreese/craigslist-carstrucks-data --unzip -p ./
 | **SMOTE (Synthetic Minority Oversampling Technique)** | Generates synthetic samples for the minority class by interpolating between existing minority samples. Applied only to training data to avoid data leakage. |
 | **F1 Score** | Harmonic mean of precision and recall. More informative than accuracy for imbalanced datasets since it penalizes both false positives and false negatives. |
 
+### Evaluation Tools
+
+| Concept | Definition |
+|---------|-----------|
+| **Confusion Matrix** | A grid that shows the counts of correct and incorrect predictions broken down by class. For binary classification it has four cells: **True Negatives** (predicted <=50K, actually <=50K), **False Positives** (predicted >50K, actually <=50K), **False Negatives** (predicted <=50K, actually >50K), and **True Positives** (predicted >50K, actually >50K). Precision, Recall, and F1 are all derived from these four counts. Visualised as a heatmap so misclassification patterns are easy to spot at a glance. |
+| **Classification Report** | A text table produced by scikit-learn (`classification_report`) that computes Precision, Recall, F1, and Support for each class from the confusion matrix counts, plus macro and weighted averages across all classes. |
+
 ### Model Training & Evaluation
 
 | Concept | Definition |
