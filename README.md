@@ -64,9 +64,9 @@ kaggle datasets download -d austinreese/craigslist-carstrucks-data --unzip -p ./
 
 | Concept | Definition |
 |---------|-----------|
-| **StandardScaler** | Transforms features to have zero mean and unit variance. Essential for distance-based algorithms (KNN, SVM) and regularized models. |
-| **OneHotEncoding** | Converts categorical variables into binary indicator columns. Each category becomes its own 0/1 feature. |
-| **ColumnTransformer** | Applies different preprocessing steps to different subsets of columns in a single transformer object. |
+| **StandardScaler** | Transforms numeric features to have zero mean and unit variance by subtracting the mean and dividing by the standard deviation. Essential for Logistic Regression (gradient-based optimisation) and KNN (distance-based classification) — without it, features on larger numeric scales dominate and distort the model. Tree-based models are scale-invariant and do not require it. |
+| **OneHotEncoding** | Converts each categorical string column into a set of binary (0/1) columns — one per unique category value (e.g. `sex` → `sex_Male`, `sex_Female`). Required because ML models need numeric input. Using ordinal integers instead (Male=0, Female=1) would imply a false numeric ordering between categories. `handle_unknown='ignore'` ensures unseen test categories produce all-zero columns rather than an error. |
+| **ColumnTransformer** | Applies different preprocessing steps to different column subsets simultaneously — StandardScaler to numeric columns and OneHotEncoder to categorical columns in one step. Used as the first stage of each Pipeline so that transformations are fitted only on training data and applied to test data, preventing data leakage during cross-validation and evaluation. |
 | **Train-Test Split** | Partitioning data into separate training and test sets to evaluate generalization performance on unseen data. |
 | **Stratified Split** | Ensures the class distribution in train/test sets mirrors the original dataset — critical for imbalanced data. |
 
